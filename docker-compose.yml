@@ -1,0 +1,108 @@
+# Production: docker-compose -f docker-compose.yml up -d
+# Local dev:  docker-compose up -d  (merges override — adds local Redis + Postgres)
+
+x-superset-image: &superset-image apachesuperset.docker.scarf.sh/apache/superset:6.0.0
+x-superset-volumes: &superset-volumes
+  - ./docker:/app/docker
+  - superset_home:/app/superset_home
+
+services:
+  superset:
+    image: *superset-image
+    container_name: superset_app
+    command: ["/app/docker/docker-bootstrap.sh", "app-gunicorn"]
+    user: "root"
+    restart: unless-stopped
+    ports:
+      - "80:8088"
+    env_file:
+      - docker/.env-prod
+      - .env
+    volumes: *superset-volumes
+    environment:
+      - SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}
+      - SERVER_WORKER_AMOUNT=${SERVER_WORKER_AMOUNT:-4}
+      - SERVER_THREADS_AMOUNT=${SERVER_THREADS_AMOUNT:-4}
+      - GUNICORN_TIMEOUT=1800
+      - GUNICORN_KEEPALIVE=120
+      - WORKER_MAX_REQUESTS=1000
+      - WORKER_MAX_REQUESTS_JITTER=50
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    stop_grace_period: 30s
+
+  superset-init:
+    image: *superset-image
+    container_name: superset_init
+    command: ["/app/docker/docker-init.sh"]
+    user: "root"
+    env_file:
+      - docker/.env-prod
+      - .env
+    volumes: *superset-volumes
+    environment:
+      - SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}
+    healthcheck:
+      disable: true
+    restart: "no"
+
+  superset-worker:
+    image: *superset-image
+    container_name: superset_worker
+    command: ["/app/docker/docker-bootstrap.sh", "worker"]
+    user: "root"
+    restart: unless-stopped
+    env_file:
+      - docker/.env-prod
+      - .env
+    volumes: *superset-volumes
+    environment:
+      - SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  superset-worker-2:
+    image: *superset-image
+    container_name: superset_worker_2
+    command: ["/app/docker/docker-bootstrap.sh", "worker"]
+    user: "root"
+    restart: unless-stopped
+    env_file:
+      - docker/.env-prod
+      - .env
+    volumes: *superset-volumes
+    environment:
+      - SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  superset-worker-beat:
+    image: *superset-image
+    container_name: superset_worker_beat
+    command: ["/app/docker/docker-bootstrap.sh", "beat"]
+    user: "root"
+    restart: unless-stopped
+    env_file:
+      - docker/.env-prod
+      - .env
+    volumes: *superset-volumes
+    environment:
+      - SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}
+    healthcheck:
+      disable: true
+
+volumes:
+  superset_home:
+    external: false

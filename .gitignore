@@ -1,0 +1,10 @@
+.env
+*.pyc
+*.pyo
+__pycache__/
+.copier-answers.yml
+pulumi/venv/
+pulumi/.pulumi/
+pulumi/Pulumi.*.yaml
+!pulumi/Pulumi.yaml
+superset_home/

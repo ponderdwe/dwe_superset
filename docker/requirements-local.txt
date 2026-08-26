@@ -1,0 +1,4 @@
+# Add extra Python packages here — installed on every container start.
+# Examples:
+#   sqlalchemy-redshift==0.8.14
+#   trino[sqlalchemy]>=0.322.0

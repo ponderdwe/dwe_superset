@@ -1,0 +1,2 @@
+# Version pins to avoid conflicts with the base image's installed packages.
+# Applied via --override flag when installing requirements-local.txt.
