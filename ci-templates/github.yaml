@@ -79,6 +79,18 @@ jobs:
           pulumi config set {@ PROJECT_NAME @}:resource_group ${{ secrets.RESOURCE_GROUP }} --stack ${{ env.WORKSPACE }}
           pulumi config set {@ PROJECT_NAME @}:subscription_id ${{ secrets.AZURE_SUBSCRIPTION_ID }} --stack ${{ env.WORKSPACE }}
           pulumi config set {@ PROJECT_NAME @}:cloud_provider {@ CLOUD_PROVIDER @} --stack ${{ env.WORKSPACE }}
+{% if INSTANCE_TYPE %}
+          pulumi config set {@ PROJECT_NAME @}:instance_type "{@ INSTANCE_TYPE @}" --stack ${{ env.WORKSPACE }}
+{% endif %}
+{% if VOLUME_SIZE %}
+          pulumi config set {@ PROJECT_NAME @}:volume_size "{@ VOLUME_SIZE @}" --stack ${{ env.WORKSPACE }}
+{% endif %}
+{% if REDIS_MODE %}
+          pulumi config set {@ PROJECT_NAME @}:redis_mode "{@ REDIS_MODE @}" --stack ${{ env.WORKSPACE }}
+{% endif %}
+{% if REDIS_SKU %}
+          pulumi config set {@ PROJECT_NAME @}:redis_sku "{@ REDIS_SKU @}" --stack ${{ env.WORKSPACE }}
+{% endif %}
         working-directory: pulumi
         env:
           PULUMI_BACKEND_URL: ${{ secrets.PULUMI_AZURE_STATE }}
@@ -155,6 +167,18 @@ jobs:
           pulumi config set {@ PROJECT_NAME @}:resource_group ${{ secrets.RESOURCE_GROUP }} --stack ${{ env.WORKSPACE }}
           pulumi config set {@ PROJECT_NAME @}:subscription_id ${{ secrets.AZURE_SUBSCRIPTION_ID }} --stack ${{ env.WORKSPACE }}
           pulumi config set {@ PROJECT_NAME @}:cloud_provider {@ CLOUD_PROVIDER @} --stack ${{ env.WORKSPACE }}
+{% if INSTANCE_TYPE %}
+          pulumi config set {@ PROJECT_NAME @}:instance_type "{@ INSTANCE_TYPE @}" --stack ${{ env.WORKSPACE }}
+{% endif %}
+{% if VOLUME_SIZE %}
+          pulumi config set {@ PROJECT_NAME @}:volume_size "{@ VOLUME_SIZE @}" --stack ${{ env.WORKSPACE }}
+{% endif %}
+{% if REDIS_MODE %}
+          pulumi config set {@ PROJECT_NAME @}:redis_mode "{@ REDIS_MODE @}" --stack ${{ env.WORKSPACE }}
+{% endif %}
+{% if REDIS_SKU %}
+          pulumi config set {@ PROJECT_NAME @}:redis_sku "{@ REDIS_SKU @}" --stack ${{ env.WORKSPACE }}
+{% endif %}
           pulumi config set startup_code_version "${{ github.sha }}" --stack ${{ env.WORKSPACE }}
           pulumi up --yes --stack ${{ env.WORKSPACE }}
         working-directory: pulumi
