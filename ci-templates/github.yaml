@@ -63,8 +63,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -r requirements.txt
-        working-directory: pulumi
       - name: Install Pulumi CLI
         run: curl -fsSL https://get.pulumi.com | sh && echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
 {% if CLOUD_PROVIDER == "azure" %}
@@ -80,6 +78,7 @@ jobs:
           pulumi config set {@ PROJECT_NAME @}:key_vault_name ${{ secrets.KEY_VAULT_NAME }} --stack ${{ env.WORKSPACE }}
           pulumi config set {@ PROJECT_NAME @}:resource_group ${{ secrets.RESOURCE_GROUP }} --stack ${{ env.WORKSPACE }}
           pulumi config set {@ PROJECT_NAME @}:subscription_id ${{ secrets.AZURE_SUBSCRIPTION_ID }} --stack ${{ env.WORKSPACE }}
+          pulumi config set {@ PROJECT_NAME @}:cloud_provider {@ CLOUD_PROVIDER @} --stack ${{ env.WORKSPACE }}
         working-directory: pulumi
         env:
           PULUMI_BACKEND_URL: ${{ secrets.PULUMI_AZURE_STATE }}
@@ -104,8 +103,10 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: {@ AWS_REGION @}
-      - name: Init stack if needed
-        run: pulumi stack select ${{ env.WORKSPACE }} 2>/dev/null || pulumi stack init ${{ env.WORKSPACE }}
+      - name: Init stack and set config
+        run: |
+          pulumi stack select ${{ env.WORKSPACE }} 2>/dev/null || pulumi stack init ${{ env.WORKSPACE }}
+          pulumi config set {@ PROJECT_NAME @}:cloud_provider {@ CLOUD_PROVIDER @} --stack ${{ env.WORKSPACE }}
         working-directory: pulumi
         env:
           PULUMI_BACKEND_URL: ${{ secrets.PULUMI_S3_STATE }}
@@ -133,8 +134,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -r requirements.txt
-        working-directory: pulumi
       - name: Install Pulumi CLI
         run: curl -fsSL https://get.pulumi.com | sh && echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
 {% if CLOUD_PROVIDER == "azure" %}
@@ -155,6 +154,7 @@ jobs:
           pulumi config set {@ PROJECT_NAME @}:key_vault_name ${{ secrets.KEY_VAULT_NAME }} --stack ${{ env.WORKSPACE }}
           pulumi config set {@ PROJECT_NAME @}:resource_group ${{ secrets.RESOURCE_GROUP }} --stack ${{ env.WORKSPACE }}
           pulumi config set {@ PROJECT_NAME @}:subscription_id ${{ secrets.AZURE_SUBSCRIPTION_ID }} --stack ${{ env.WORKSPACE }}
+          pulumi config set {@ PROJECT_NAME @}:cloud_provider {@ CLOUD_PROVIDER @} --stack ${{ env.WORKSPACE }}
           pulumi config set startup_code_version "${{ github.sha }}" --stack ${{ env.WORKSPACE }}
           pulumi up --yes --stack ${{ env.WORKSPACE }}
         working-directory: pulumi
@@ -198,6 +198,7 @@ jobs:
         run: |
           cd pulumi
           pulumi stack select ${{ env.WORKSPACE }} 2>/dev/null || pulumi stack init ${{ env.WORKSPACE }}
+          pulumi config set {@ PROJECT_NAME @}:cloud_provider {@ CLOUD_PROVIDER @} --stack ${{ env.WORKSPACE }}
           pulumi config set startup_code_version "${{ github.sha }}" --stack ${{ env.WORKSPACE }}
           pulumi up --yes --stack ${{ env.WORKSPACE }}
         env:
