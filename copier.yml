@@ -131,9 +131,6 @@ _dwe_hub:
     - key: DB_PASS
       description: "PostgreSQL master password"
       destination: secrets_manager
-    - key: REDIS_HOST
-      description: "Redis hostname (ElastiCache endpoint)"
-      destination: secrets_manager
     - key: SUPERSET_SECRET_KEY
       description: "Flask secret key (generate with: openssl rand -hex 32)"
       destination: secrets_manager
@@ -144,6 +141,9 @@ _dwe_hub:
       description: "Git token for repo clone on EC2 boot"
       destination: secrets_manager
   optional_secrets:
+    - key: REDIS_HOST
+      description: "Redis hostname — required only when redis_mode=managed (Pulumi injects it automatically); unused when redis_mode=local"
+      destination: secrets_manager
     - key: REDIS_PORT
       description: "Redis port (defaults to 6379)"
       destination: secrets_manager
@@ -263,3 +263,26 @@ secret_id:
   help: "Secret name in AWS Secrets Manager holding all runtime credentials."
   x_dwe_editable: true
   x_dwe_per_env: false
+
+redis_mode:
+  type: str
+  default: local
+  choices:
+    - local
+    - managed
+  help: "Redis deployment: 'local' runs a Redis container on the VM (free, no SLA); 'managed' provisions Azure Cache for Redis."
+  x_dwe_editable: true
+  x_dwe_per_env: false
+
+redis_sku:
+  type: str
+  default: C0
+  choices:
+    - C0
+    - C1
+    - C2
+    - C3
+  help: "Azure Cache for Redis SKU — only used when redis_mode=managed. C0=Basic 250MB ~$16/mo, C1=Standard 1GB ~$60/mo, C2=Standard 6GB ~$130/mo."
+  when: "{{ redis_mode == 'managed' }}"
+  x_dwe_editable: true
+  x_dwe_per_env: true

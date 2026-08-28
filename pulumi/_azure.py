@@ -14,6 +14,7 @@ from pathlib import Path
 import pulumi
 import pulumi_azure_native as azure_native
 import pulumi_azure_native.dbforpostgresql.v20221201 as pg
+from pulumi_azure_native.cache import Redis as AzureRedis, SkuArgs as RedisSkuArgs
 import yaml
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
@@ -47,6 +48,8 @@ volume_size          = int(config.get("volume_size") or "50")
 resource_group       = config.require("resource_group")
 subscription_id      = config.require("subscription_id")
 startup_code_version = config.get("startup_code_version") or ""
+redis_mode           = config.get("redis_mode") or "local"
+redis_sku_name       = config.get("redis_sku") or "C0"
 app_port             = 8088
 
 suffix = f"-{env}" if env != "prod" else ""
@@ -124,6 +127,28 @@ pg.Database(
     server_name=db_host.split(".")[0],
     database_name=db_name,
 )
+
+# ── Redis ─────────────────────────────────────────────────────────────────────
+# redis_mode=local  → Redis container on the VM (free, no SLA)
+# redis_mode=managed → Azure Cache for Redis (redis_sku: C0 Basic ~$16/mo, C1 Standard ~$60/mo)
+if redis_mode == "managed":
+    _sku_capacity = int(redis_sku_name[1])
+    _sku_tier = "Basic" if _sku_capacity == 0 else "Standard"
+    _redis_cache = AzureRedis(
+        f"{project_name}-redis{suffix}",
+        resource_group_name=resource_group,
+        location=azure_location,
+        name=f"{project_name}-redis{suffix}",
+        sku=RedisSkuArgs(name=_sku_tier, family="C", capacity=_sku_capacity),
+        enable_non_ssl_port=True,
+        minimum_tls_version="1.0",
+        tags=tags,
+    )
+    _redis_host_output = _redis_cache.host_name
+    _redis_port = "6379"
+else:
+    _redis_host_output = pulumi.Output.from_input("redis")
+    _redis_port = "6379"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Public IP for Application Gateway
@@ -290,7 +315,14 @@ app_gw = azure_native.network.ApplicationGateway(
 # ─────────────────────────────────────────────────────────────────────────────
 # Startup script — install Docker, clone repo, write .env, start Superset
 # ─────────────────────────────────────────────────────────────────────────────
-startup_script = f"""#!/bin/bash
+_compose_files = (
+    "-f docker-compose.yml -f docker-compose.local-redis.yml"
+    if redis_mode == "local"
+    else "-f docker-compose.yml"
+)
+
+def _build_startup(redis_host: str) -> str:
+    return f"""#!/bin/bash
 set -e
 exec > >(tee /var/log/superset-init.log | logger -t superset-init) 2>&1
 
@@ -326,18 +358,22 @@ git -C /home/ubuntu/superset rev-parse HEAD > /home/ubuntu/superset/.schema-vers
 echo "$SECRET_JSON" | jq -r 'to_entries[] | .key + "=" + (.value | tostring)' > /home/ubuntu/superset/.env
 chmod 600 /home/ubuntu/superset/.env
 
-# Inject constructed database URI (DB created by Pulumi above)
+# Inject Pulumi-managed values (override any KV defaults)
 echo "SQLALCHEMY_DATABASE_URI={sqlalchemy_database_uri}" >> /home/ubuntu/superset/.env
+echo "REDIS_HOST={redis_host}" >> /home/ubuntu/superset/.env
+echo "REDIS_PORT={_redis_port}" >> /home/ubuntu/superset/.env
 
 # Fix shell script permissions
 chmod +x /home/ubuntu/superset/docker/*.sh
 
 # Run DB init (migrations + admin user) then start app
 cd /home/ubuntu/superset
-docker-compose -f docker-compose.yml run --rm superset-init
-docker-compose -f docker-compose.yml up -d superset superset-worker superset-worker-2 superset-worker-beat
+docker-compose {_compose_files} run --rm superset-init
+docker-compose {_compose_files} up -d superset superset-worker superset-worker-2 superset-worker-beat
 """
-custom_data = base64.b64encode(startup_script.encode()).decode()
+
+_startup_output = _redis_host_output.apply(_build_startup)
+custom_data = _startup_output.apply(lambda s: base64.b64encode(s.encode()).decode())
 
 # ─────────────────────────────────────────────────────────────────────────────
 # VMSS

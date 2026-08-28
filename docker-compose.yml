@@ -1,6 +1,3 @@
-# Production: docker-compose -f docker-compose.yml up -d
-# Local dev:  docker-compose up -d  (merges override — adds local Redis + Postgres)
-
 x-superset-image: &superset-image apachesuperset.docker.scarf.sh/apache/superset:6.0.0
 x-superset-volumes: &superset-volumes
   - ./docker:/app/docker

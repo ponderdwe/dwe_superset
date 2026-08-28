@@ -1,0 +1,26 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: superset_cache
+    restart: unless-stopped
+    command: redis-server --maxmemory 200mb --maxmemory-policy allkeys-lru
+
+  superset:
+    depends_on:
+      - redis
+
+  superset-init:
+    depends_on:
+      - redis
+
+  superset-worker:
+    depends_on:
+      - redis
+
+  superset-worker-2:
+    depends_on:
+      - redis
+
+  superset-worker-beat:
+    depends_on:
+      - redis

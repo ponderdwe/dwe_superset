@@ -9,3 +9,7 @@ config:
 {% else %}
   {{ project_name }}:aws_region: {{ aws_region }}
 {% endif %}
+  {{ project_name }}:redis_mode: {{ redis_mode }}
+{% if redis_mode == "managed" %}
+  {{ project_name }}:redis_sku: {{ redis_sku }}
+{% endif %}
