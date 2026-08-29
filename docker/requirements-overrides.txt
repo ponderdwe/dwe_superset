@@ -1,2 +1,6 @@
 # Version pins to avoid conflicts with the base image's installed packages.
 # Applied via --override flag when installing requirements-local.txt.
+
+# Superset 6.0.0 ships with SQLAlchemy 1.4 and uses removed APIs (eagerload).
+# Transitive deps would otherwise upgrade SQLAlchemy to 2.x.
+SQLAlchemy>=1.4.0,<2.0
