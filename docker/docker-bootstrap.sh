@@ -34,6 +34,9 @@ case "${1}" in
     echo "Starting web app (gunicorn)..."
     /app/docker/run-server.sh
     ;;
+  "")
+    # Called without a command (e.g. from docker-init.sh to run requirements install only)
+    ;;
   *)
     echo "Unknown command: ${1}"
     exit 1
