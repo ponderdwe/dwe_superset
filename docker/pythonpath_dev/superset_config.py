@@ -1,4 +1,6 @@
 import base64
+import hashlib
+import hmac
 import logging
 import os
 from typing import Optional
@@ -139,6 +141,12 @@ WTF_CSRF_ENABLED = False
 OVERRIDE_HTTP_HEADERS = {"X-Frame-Options": "ALLOWALL"}
 TALISMAN_ENABLED = False
 GUEST_ROLE_NAME = "All_Dashboard_Reader"
+# Signs the guest tokens embedded dashboards use. Superset's default is public, so anyone
+# could forge a token, row-level security clauses included. Derived from the Flask secret
+# key, so it needs no secret of its own but isn't the same key.
+GUEST_TOKEN_JWT_SECRET = hmac.new(
+    get_env_variable("SUPERSET_SECRET_KEY").encode(), b"guest-token-jwt", hashlib.sha256
+).hexdigest()
 SUPERSET_DASHBOARD_POSITION_DATA_LIMIT = 131070
 
 # ── OAuth / SSO (optional) ────────────────────────────────────────────────────
